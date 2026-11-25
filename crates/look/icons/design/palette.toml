@@ -80,6 +80,75 @@ source = "#826700"
 light = "#826700"
 dark = "#857100"
 
+# pepe: Fusion 360 -tyyliset roolit (oma käännös). Model-välilehden kuvakkeet on piirretty
+# Fusionin SOLID-välilehden mallin mukaan: vaaleat harmaat kappaleet, sininen tulos, ohuet
+# tummat reunat. Pinnat saavat renderöijässä liukuvärin; *-edge- ja fx-ink-roolit pysyvät
+# tasaisina viivoina. Surface- ja Sketch-korostukset värittävät fx-blue-roolit (alla).
+[roles.fx-white]
+source = "#fbfbfb"
+light = "#fbfbfb"
+dark  = "#c9d0d8"
+[roles.fx-grey-1]
+source = "#e4e4e4"
+light = "#e4e4e4"
+dark  = "#a3acb7"
+[roles.fx-grey-2]
+source = "#cbcbcb"
+light = "#cbcbcb"
+dark  = "#86909c"
+[roles.fx-edge]
+source = "#5b5b5b"
+light = "#5b5b5b"
+dark  = "#2a2e34"
+[roles.fx-ink]
+source = "#3a3a3a"
+light = "#3a3a3a"
+dark  = "#e3e7ec"
+[roles.fx-blue-1]
+source = "#8ecbf7"
+light = "#8ecbf7"
+dark  = "#79b9ea"
+[roles.fx-blue-2]
+source = "#5aa6e3"
+light = "#5aa6e3"
+dark  = "#4f97d6"
+[roles.fx-blue-3]
+source = "#3a86c8"
+light = "#3a86c8"
+dark  = "#3479ba"
+[roles.fx-blue-edge]
+source = "#2b6fae"
+light = "#2b6fae"
+dark  = "#24609a"
+[roles.fx-green]
+source = "#55bd70"
+light = "#55bd70"
+dark  = "#4dae66"
+[roles.fx-green-edge]
+source = "#23a046"
+light = "#23a046"
+dark  = "#3cbc5f"
+[roles.fx-orange]
+source = "#e59a62"
+light = "#e59a62"
+dark  = "#d58a52"
+[roles.fx-orange-edge]
+source = "#b9733f"
+light = "#b9733f"
+dark  = "#c98350"
+[roles.fx-yellow]
+source = "#f4a91c"
+light = "#f4a91c"
+dark  = "#e09a14"
+[roles.fx-yellow-edge]
+source = "#b97a07"
+light = "#b97a07"
+dark  = "#c98a17"
+[roles.fx-purple]
+source = "#cdb6f2"
+light = "#cdb6f2"
+dark  = "#a98fd6"
+
 [strokes]          # on the 64 grid
 geometry = 2.55
 action = 4.25
@@ -156,6 +225,33 @@ dark  = "#ad7023"
 light = "#9c5600"
 dark  = "#a75d00"
 
+# pepe: Fusion-sinisten roolien vastineet, jotta surface_extrude, sketch_move ym. aliakset
+# saavat korostusvärinsä myös uusilla Fusion-tyylisillä pohjilla.
+[accents.surface.fx-blue-1]
+light = "#f3c99a"
+dark  = "#d9a36f"
+[accents.surface.fx-blue-2]
+light = "#e39a4e"
+dark  = "#cf8a3f"
+[accents.surface.fx-blue-3]
+light = "#c4762a"
+dark  = "#b06a22"
+[accents.surface.fx-blue-edge]
+light = "#a45000"
+dark  = "#955a0e"
+[accents.sketch.fx-blue-1]
+light = "#a7e0b8"
+dark  = "#86c99b"
+[accents.sketch.fx-blue-2]
+light = "#5cbf77"
+dark  = "#4fae69"
+[accents.sketch.fx-blue-3]
+light = "#3a9a57"
+dark  = "#338a4d"
+[accents.sketch.fx-blue-edge]
+light = "#057f45"
+dark  = "#128d45"
+
 # Same accessibility adjustments as the application's semantic UI tokens.
 # Protan/Deutan share red-green; Tritan uses blue-yellow. Unlisted roles keep their ramp.
 [variants.red-green.sketch.active-3]
@@ -195,7 +291,7 @@ sketch = [
   "project", "project_surface", "rect", "rect3", "rect_center",
   "rect_rounded", "sketch", "sketch_chamfer", "sketch_chamfer_angle", "sketch_chamfer_two_distances",
   "sketch_fillet", "sketch_mirror", "slot", "slot_center", "slot_overall",
-  "snap", "spline", "spline_cv", "spun", "svg",
+  "snap", "spline", "spline_cv", "spun",
   "trim",
 ]
 constraint = [

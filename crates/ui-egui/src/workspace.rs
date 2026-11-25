@@ -275,6 +275,24 @@ const CONFIGURE: &[&str] = &["parameters.change", "config.table", "config.config
 /// points are moved with the triad that appears when one is clicked, not a Move button.
 pub const AGENT_ONLY: &[&str] = &["sketch.solve", "sketch.move3d"];
 
+/// pepe: MODEL groups laid out as on Fusion's SOLID tab that only repeat commands whose home is
+/// another tab: they are never a command's destination.
+const REPEAT_ONLY: &[&str] = &["CONFIGURE", "INSPECT", "INSERT", "ASSEMBLE", "SELECT"];
+
+/// pepe: Fusion-style icons for commands whose ribbon button has its own icon on Fusion's SOLID
+/// tab; the engine's icon stays in the browser, the timeline and elsewhere.
+pub fn fusion_icon(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "sketch.create" => "create_sketch",
+        "config.configure" => "configure",
+        "config.rules" => "configuration_rules",
+        "construct.plane.offset" => "offset_plane",
+        "component.create" => "new_component",
+        "select.filter" => "select_window",
+        _ => return None,
+    })
+}
+
 pub const SECTIONS: &[Section] = &[
     Section {
         tab: "DRAWING LAYOUT",
@@ -343,33 +361,100 @@ pub const SECTIONS: &[Section] = &[
         ids: &["drawing.revision", "drawing.revise.planned", "drawing.revision.tag.add.planned"],
     },
     Section { tab: "DRAWING REVIEW", panel: "OUTPUT", promoted: 2, ids: &["drawing.export.planned", "drawing.print"] },
+    // pepe: MODEL is laid out as Fusion 360's SOLID tab: CREATE, MODIFY, CONFIGURE, CONSTRUCT,
+    // INSPECT, INSERT, ASSEMBLE and SELECT, with Fusion's buttons pinned in Fusion's order. The
+    // sketch tools and the former ARRANGE commands follow in the CREATE and MODIFY drop-downs.
+    // CONFIGURE, INSPECT, INSERT, ASSEMBLE and SELECT only repeat commands whose home is another
+    // tab (see `REPEAT_ONLY`), so those tabs keep them.
     Section {
         tab: "MODEL",
-        panel: "SKETCH",
-        promoted: 1,
-        ids: &["sketch.create", "sketch.edit", "sketch.line3d", "sketch.arc3d", "sketch.spline3d", "sketch.point3d"],
+        panel: "CREATE",
+        promoted: 7,
+        ids: &[
+            "sketch.create",
+            "solid.extrude",
+            "solid.revolve",
+            "solid.pattern.rectangular",
+            "solid.pattern.circular",
+            "solid.mirror",
+            "solid.loft",
+            "solid.hole",
+            "sketch.edit",
+            "sketch.line3d",
+            "sketch.arc3d",
+            "sketch.spline3d",
+            "sketch.point3d",
+            "solid.pattern.path",
+        ],
     },
-    Section { tab: "MODEL", panel: "CREATE", promoted: 3, ids: &["solid.extrude", "solid.revolve", "solid.hole"] },
     Section {
         tab: "MODEL",
         panel: "MODIFY",
-        promoted: 4,
-        ids: &["solid.fillet", "solid.chamfer", "solid.shell", "solid.press_pull", "sheet.convert"],
+        promoted: 7,
+        ids: &[
+            "solid.fillet",
+            "solid.chamfer",
+            "solid.shell",
+            "solid.offset_face",
+            "solid.combine",
+            "parameters.change",
+            "solid.move",
+            "solid.press_pull",
+            "solid.scale",
+            "solid.align",
+            "sheet.convert",
+        ],
     },
-    Section {
-        tab: "MODEL",
-        panel: "ARRANGE",
-        promoted: 3,
-        ids: &["solid.move", "solid.mirror", "solid.pattern.rectangular", "solid.align", "solid.pattern.circular", "solid.pattern.path"],
-    },
-    Section { tab: "MODEL", panel: "CONFIGURE", promoted: 2, ids: CONFIGURE },
-    // Plane, Axis and Point work out the method from the picks; the methods follow in the menu.
+    Section { tab: "MODEL", panel: "CONFIGURE", promoted: 3, ids: &["config.configure", "config.table", "config.rules", "parameters.change"] },
     Section {
         tab: "MODEL",
         panel: "CONSTRUCT",
-        promoted: 3,
-        ids: &["construct.plane", "construct.axis", "construct.point", "construct.plane.offset"],
+        promoted: 1,
+        ids: &["construct.plane.offset", "construct.plane", "construct.axis", "construct.point"],
     },
+    Section {
+        tab: "MODEL",
+        panel: "INSPECT",
+        promoted: 1,
+        ids: &[
+            "inspect.measure",
+            "inspect.section",
+            "inspect.interference",
+            "inspect.curvature_comb",
+            "inspect.zebra",
+            "inspect.draft",
+            "inspect.curvature_map",
+            "inspect.isocurve",
+            "inspect.accessibility",
+            "inspect.minimum_radius",
+            "inspect.center_of_mass",
+        ],
+    },
+    Section {
+        tab: "MODEL",
+        panel: "INSERT",
+        promoted: 1,
+        ids: &[
+            "sketch.insert_svg",
+            "sketch.insert_dxf",
+            "file.insert_step",
+            "file.insert_mesh",
+            "canvas.insert",
+            "component.insert_design",
+            "parts.insert",
+            "parts.fastener",
+            "pointcloud.insert",
+            "file.insert_gerber",
+        ],
+    },
+    Section {
+        tab: "MODEL",
+        panel: "ASSEMBLE",
+        promoted: 1,
+        ids: &["component.create", "joint.create", "joint.as_built", "assembly.constraint.create", "joint.rigid_group", "component.insert_design"],
+    },
+    // The selection filter, as on VIEW; the toolbar gives it a Select button (`toolbar.rs`).
+    Section { tab: "MODEL", panel: "SELECT", promoted: 0, ids: &[] },
     // Only while a linked design is edited in place, pinned at the right as FINISH SKETCH is.
     Section { tab: "MODEL", panel: "FINISH EDITING", promoted: 1, ids: &["component.finish_edit"] },
     // Sketches drive surfaces too: New Sketch leads the tab, as on MODEL and SHEET METAL.
@@ -792,7 +877,15 @@ pub(crate) fn legacy_render_destination(c: &CommandSpec) -> Option<(&'static str
         _ => None,
     };
     primary
-        .or_else(|| SECTIONS.iter().chain(LEGACY_RENDER_SECTIONS).find(|s| s.ids.contains(&c.id)).map(|s| (s.tab, s.panel)))
+        .or_else(|| {
+            SECTIONS
+                .iter()
+                .chain(LEGACY_RENDER_SECTIONS)
+                // pepe: MODEL's Fusion groups that only repeat other tabs' commands.
+                .filter(|s| !(s.tab == "MODEL" && REPEAT_ONLY.contains(&s.panel)))
+                .find(|s| s.ids.contains(&c.id))
+                .map(|s| (s.tab, s.panel))
+        })
         .or_else(|| PLACEMENTS.iter().find(|(t, p, ..)| *t == c.tab && *p == c.panel).map(|(_, _, t, p)| (*t, *p)))
 }
 

@@ -680,6 +680,11 @@ pub(super) fn layout(app: &mut SolveApp, ui: &mut egui::Ui) {
                     });
                 }
             });
+            // pepe: the ribbon's icon size (Fusion-like 32 px by default).
+            let label_width = ui_kit::ContentWidth::label(ui, app.tr("prefs.ribbon_icon_size"));
+            ui_kit::settings_form(ui, label_width, |ui| {
+                setting::ribbon_icon_size(app, ui).backing_on_hover_text(app.tr("prefs.ribbon_icon_size_note"));
+            });
         });
         super::navbar::show(app, ui);
     });

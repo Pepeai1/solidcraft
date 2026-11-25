@@ -2460,17 +2460,27 @@ impl PanelHost for WorkspaceContentHost<'_> {
         });
         let content_context = paint_context.as_ref().unwrap_or(context);
         let start = self.drag_cards.as_ref().map(|_| shape_count(self.ui.ctx(), layer));
+        // pepe: the Browser has no card behind its rows, only its header bar keeps the fill.
+        let see_through = section.instance.0 == "browser";
+        let header_fill = appearance.fill;
+        let floating_card = section.peek || section.zone == Zone::Floating;
         ui_kit::panel_host_surface(
             self.ui,
             panel_id,
             paint_bounds,
             section.peek || section.zone == Zone::Floating,
-            appearance.fill,
+            if see_through { egui::Color32::TRANSPARENT } else { appearance.fill },
             matches!(appearance.contrast, Some(ContrastOutcome::RetainReadableFallback { .. })).then(|| style.palette(appearance)),
             |ui, content_clip| {
                 if (section.peek || section.zone == Zone::Floating) && (!ui.is_visible() || ui.is_sizing_pass()) {
                     self.unpainted.push((ui.layer_id(), section.outer, ui.is_sizing_pass()));
                     return;
+                }
+                if see_through {
+                    let mut corners = ui_kit::panel_host_frame(ui.ctx(), floating_card).corner_radius;
+                    corners.sw = 0;
+                    corners.se = 0;
+                    ui.painter().rect_filled(egui_rect(paint_section.header), corners, header_fill);
                 }
                 // A surface response provides semantic focus and owns only the actual
                 // painted card; child controls retain their own accessible responses.

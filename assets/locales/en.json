@@ -3138,6 +3138,8 @@
   "prefs.command_dialog_values": "Command dialogs",
   "prefs.community": "Community",
   "prefs.constraint_glyph_size": "Constraint glyph size",
+  "prefs.ribbon_icon_size": "Ribbon icon size",
+  "prefs.ribbon_icon_size_note": "The size of the ribbon buttons' icons. The ribbon grows with them; 26 px is the original size.",
   "prefs.constraint_glyph_size_note": "How large constraint glyphs and their letters or icons are drawn in a sketch. 100% is the usual size; glyphs keep this screen size at every zoom.",
   "prefs.construct_menu_groups": "Group Construct tools by entity type",
   "prefs.construct_menu_groups_help": "Show Planes, Axes and Points headings. Off keeps the original menu order.",

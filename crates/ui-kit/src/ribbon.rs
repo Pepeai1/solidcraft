@@ -91,6 +91,38 @@ pub const BUTTON_LABEL_TOP: f32 = 32.0;
 pub const BUTTON_LABEL_BOTTOM: f32 = 2.0;
 pub const SECTION_HEIGHT: f32 = 20.0;
 
+/// pepe: the ribbon buttons' icon size, from the preferences (`ribbon_icon_size`). The layout's
+/// constants are for the original 26 px icons; buttons, groups and the label below the icon grow
+/// by the difference. 26.0 as `f32` bits until the app sets it.
+static ICON_SIDE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0x41D0_0000);
+pub const ICON_SIDE_RANGE: std::ops::RangeInclusive<f32> = 20.0..=48.0;
+
+/// Sets the ribbon buttons' icon size in points (clamped to `ICON_SIDE_RANGE`).
+pub fn set_icon_side(side: f32) {
+    let side = if side.is_finite() { side.clamp(*ICON_SIDE_RANGE.start(), *ICON_SIDE_RANGE.end()) } else { 26.0 };
+    ICON_SIDE.store(side.to_bits(), std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The ribbon buttons' icon size in points.
+pub fn icon_side() -> f32 {
+    f32::from_bits(ICON_SIDE.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// How much taller the buttons are than with the original 26 px icons.
+pub fn icon_grow() -> f32 {
+    icon_side() - 26.0
+}
+
+/// A button's height, with or without its label.
+pub fn button_height(labels: bool) -> f32 {
+    (if labels { BUTTON_HEIGHT } else { ICON_BUTTON_HEIGHT }) + icon_grow()
+}
+
+/// A group's height (its buttons and its label), with or without the buttons' labels.
+pub fn group_height(labels: bool) -> f32 {
+    (if labels { GROUP_HEIGHT } else { ICON_GROUP_HEIGHT }) + icon_grow()
+}
+
 /// The » button's room at the end of the panels, kept only while some panel is in it.
 pub const MORE_ROOM: f32 = 40.0;
 
@@ -212,7 +244,7 @@ pub fn label_width(painter: &egui::Painter, text: &str) -> f32 {
 pub fn button_width(painter: &egui::Painter, label: &str) -> f32 {
     let widest =
         label_lines(painter, label, BUTTON_MAX_WIDTH - BUTTON_LABEL_PADDING).iter().map(|line| label_width(painter, line)).fold(0.0_f32, f32::max);
-    (widest + BUTTON_LABEL_PADDING).clamp(BUTTON_MIN_WIDTH, BUTTON_MAX_WIDTH)
+    (widest + BUTTON_LABEL_PADDING).clamp(BUTTON_MIN_WIDTH, BUTTON_MAX_WIDTH).max(icon_side() + 18.0)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -334,7 +366,7 @@ pub fn button_galley_weight(painter: &egui::Painter, label: &str, width: f32, co
 /// The top of a button's label, `height` tall, in the button `whole`: below the icon, raised
 /// when it would otherwise run past the button's bottom edge (#8391).
 pub fn label_top(whole: Rect, height: f32) -> f32 {
-    (whole.top() + BUTTON_LABEL_TOP).min(whole.bottom() - BUTTON_LABEL_BOTTOM - height)
+    (whole.top() + BUTTON_LABEL_TOP + icon_grow()).min(whole.bottom() - BUTTON_LABEL_BOTTOM - height)
 }
 
 /// A group label's inset from the group's edges: the ribbon card's own inset, so their corners
@@ -603,8 +635,8 @@ pub fn show(ui: &mut egui::Ui, row: &Row, rect: Rect, more_rows: &mut dyn FnMut(
     let painter = ui.painter().clone();
     let labels = row.labels;
     let h = &row.handles;
-    let button_height = if labels { BUTTON_HEIGHT } else { ICON_BUTTON_HEIGHT };
-    let group_height = if labels { GROUP_HEIGHT } else { ICON_GROUP_HEIGHT };
+    let button_height = button_height(labels);
+    let group_height = group_height(labels);
     // Pinned constraints join the grid, which widens a column at a time beyond its default six.
     let gallery_width = |cells: usize| {
         if labels {
@@ -744,9 +776,12 @@ pub fn show(ui: &mut egui::Ui, row: &Row, rect: Rect, more_rows: &mut dyn FnMut(
                 paint_reveal(&painter, whole, &accent, r.strength, true);
                 solidcraft_ui_registry::publish_rect(h.reveal, whole);
             }
-            let side = if exit { 30.0 } else { 26.0 };
-            let icon_rect =
-                Rect::from_center_size(pos2(br.center().x, whole.top() + if labels { 16.0 } else { button_height / 2.0 }), vec2(side, side));
+            // pepe: the icon size follows the preferences (`set_icon_side`).
+            let side = if exit { icon_side() + 4.0 } else { icon_side() };
+            let icon_rect = Rect::from_center_size(
+                pos2(br.center().x, whole.top() + if labels { 16.0 + icon_grow() / 2.0 } else { button_height / 2.0 }),
+                vec2(side, side),
+            );
             crate::icons::paint_icon(&painter, icon_rect, b.icon, if b.enabled && !b.planned { 1.0 } else { 0.35 });
             if !b.app_paints {
                 resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled() && b.enabled, b.name));

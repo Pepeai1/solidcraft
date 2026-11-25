@@ -5935,6 +5935,8 @@
   "ui.visual_style": "Visuaalinen tyyli",
   "ui.visual_wireframe": "Rautalanka",
   "ui.wheel_zoom_speed": "Hiiren rullan zoomausnopeus",
+  "prefs.ribbon_icon_size": "Ribbonin kuvakekoko",
+  "prefs.ribbon_icon_size_note": "Ribbonin painikkeiden kuvakkeiden koko. Ribbon kasvaa niiden mukana; alkuperäinen koko on 26 px.",
   "ui.width": "Leveys",
   "ui.window_system": "Ikkunajärjestelmä",
   "ui.window_system_auto": "Automaattinen",

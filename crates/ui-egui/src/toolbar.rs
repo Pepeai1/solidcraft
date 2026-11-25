@@ -5,7 +5,7 @@ use crate::ui_kit::{self, Container, Edge, Surface};
 use egui::{Align2, Color32, FontId, Rect, Sense, Stroke, pos2, vec2};
 use serde_json::{Value, json};
 
-use crate::ribbon::{self, BUTTON_MIN_WIDTH, ButtonSize, GROUP_HEIGHT, ICON_GROUP_HEIGHT};
+use crate::ribbon::{self, BUTTON_MIN_WIDTH, ButtonSize, GROUP_HEIGHT};
 use crate::{SolveApp, app_bar, icons};
 use solidcraft_theme::Tokens;
 
@@ -43,7 +43,13 @@ pub(crate) const WORKSPACE_WIDTH: f32 = 88.0;
 
 /// The same height drives shell reservations and ribbon painting in either layout.
 pub(crate) fn ribbon_height(labels: bool) -> f32 {
-    if labels { RIBBON_HEIGHT } else { TAB_ROW_HEIGHT + ICON_GROUP_HEIGHT + 1.0 }
+    // pepe: groups grow with the ribbon's icon size (`ribbon::set_icon_side`).
+    TAB_ROW_HEIGHT + ribbon::group_height(labels) + 1.0
+}
+
+/// pepe: the ribbon's icon size follows the preferences (`ribbon_icon_size`).
+fn sync_icon_side(app: &SolveApp) {
+    ribbon::set_icon_side(app.preferences.ribbon_icon_size);
 }
 
 /// The commands a panel's drop-down (or its » submenu) lists: its own, then any button moved
@@ -242,6 +248,11 @@ pub fn app_bar(app: &mut SolveApp, ui: &mut egui::Ui) {
                 if shown { format!("{label} ({key})") } else { solidcraft_ui_text::format("ui.needs_design", &[("command", label)]) }
             };
             let (save_tip, undo_tip, redo_tip) = (tip("ui.save", "Ctrl+S"), tip("ui.undo", "Ctrl+Z"), tip("ui.redo", "Ctrl+Y"));
+            // pepe: New and Open between File and Save, as in Fusion's bar; the File menu keeps
+            // its own rows. They need no open design, so they take their own tips and states.
+            let new_tip = format!("{} (Ctrl+N)", app.tr("ui.new_design"));
+            let open_tip = format!("{}… (Ctrl+O)", app.tr("ui.open"));
+            let (can_new, can_open) = (FileAction::New.enabled(app), FileAction::Open.enabled(app));
             let prefs_tip = if cfg!(target_os = "macos") {
                 format!("{} (Cmd+,)", app.tr("ui.preferences"))
             } else {
@@ -262,6 +273,8 @@ pub fn app_bar(app: &mut SolveApp, ui: &mut egui::Ui) {
                 file: app.tr("ui.file"),
                 file_open,
                 actions: vec![
+                    action("new", "new", &new_tip, can_new, false),
+                    action("open", "open", &open_tip, can_open, false),
                     action("save", "save", &save_tip, shown, false),
                     action("undo", "undo", &undo_tip, shown, true),
                     action("redo", "redo", &redo_tip, shown, true),
@@ -307,6 +320,8 @@ pub fn app_bar(app: &mut SolveApp, ui: &mut egui::Ui) {
                         });
                     }
                     app_bar::BarAction::Button { id } => match id.as_str() {
+                        "new" => FileAction::New.run(app),
+                        "open" => FileAction::Open.run(app),
                         "save" => save(app),
                         "undo" => FileAction::Undo.run(app),
                         "redo" => FileAction::Redo.run(app),
@@ -1037,6 +1052,7 @@ pub(crate) fn tabs_only(app: &SolveApp) -> bool {
 /// The height the ribbon keeps from the view: the tab row alone while it is folded, whose panels
 /// then open over the view.
 pub(crate) fn reserved_height(app: &SolveApp) -> f32 {
+    sync_icon_side(app);
     if tabs_only(app) { TAB_ROW_HEIGHT + 1.0 } else { ribbon_height(app.preferences.ribbon_labels) }
 }
 
@@ -1249,7 +1265,7 @@ impl RibbonPanels {
                         let label = family.map_or_else(|| crate::workspace::ribbon_button_label(c), crate::workspace::ribbon_family_label);
                         ButtonSize { width: ribbon::button_width(painter, app.tr_label(label)), min_width: BUTTON_MIN_WIDTH }
                     } else {
-                        let width = if family.is_some() { 50.0 } else { 40.0 };
+                        let width = (if family.is_some() { 50.0 } else { 40.0 }) + ribbon::icon_grow();
                         ButtonSize { width, min_width: width }
                     };
                     let button_label = crate::workspace::ribbon_button_label(selected);
@@ -1327,7 +1343,21 @@ impl RibbonPanels {
                     icon: shown.first().or(cmds.first()).map(|c| c.info(&app.session).icon),
                     enabled: !cmds.is_empty() || panel == "SELECT",
                     open: open_menu == Some(popup_id),
-                    large: shown.iter().copied().filter(|c| !in_gallery(c)).map(button).collect(),
+                    large: {
+                        let mut large: Vec<_> = shown.iter().copied().filter(|c| !in_gallery(c)).map(&button).collect();
+                        // pepe: MODEL's SELECT group has a Select button, as on Fusion's SOLID
+                        // tab; it opens the selection filter below the group.
+                        if tab == "MODEL"
+                            && panel == "SELECT"
+                            && large.is_empty()
+                            && let Some(c) = solidcraft_engine::find_command("select.filter")
+                        {
+                            let mut select = button(c);
+                            select.enabled = true;
+                            large.push(select);
+                        }
+                        large
+                    },
                     gallery: shown.iter().copied().filter(in_gallery).map(cell).collect(),
                     more,
                 }
@@ -1497,8 +1527,9 @@ fn ribbon_contents(app: &mut SolveApp, ui: &mut egui::Ui, shape: RibbonShape) ->
     let t = Tokens::get();
     let layout = shell_layout(app);
     let host = Container::for_layout(layout, Surface::Chrome);
+    sync_icon_side(app);
     let labels = app.preferences.ribbon_labels;
-    let group_height = if labels { GROUP_HEIGHT } else { ICON_GROUP_HEIGHT };
+    let group_height = ribbon::group_height(labels);
     let RibbonShape { floating, cards, r, ws, folded } = shape;
     {
         let ribbon_left = if floating { cards.ribbon.left() } else { ws.right() };
@@ -1726,6 +1757,20 @@ fn ribbon_contents(app: &mut SolveApp, ui: &mut egui::Ui, shape: RibbonShape) ->
             }
             match action {
                 ribbon::Action::Run { id, rect, place } => {
+                    // pepe: the SELECT group's Select button opens the selection filter.
+                    if id == "select.filter"
+                        && let Some(popup_id) = panels.panels.iter().position(|p| p.panel == "SELECT").and_then(|g| panels.popup_id(g))
+                    {
+                        ui.ctx().data_mut(|d| {
+                            let key = egui::Id::unique("sc_panel_open");
+                            if d.get_temp::<egui::Id>(key) == Some(popup_id) {
+                                d.remove::<egui::Id>(key);
+                            } else {
+                                d.insert_temp(key, popup_id);
+                            }
+                        });
+                        continue;
+                    }
                     // A plugin command's button opens that command's dialog, and nothing else.
                     if crate::plugin_menu::choose_ribbon(app, &id) {
                         continue;

@@ -3941,6 +3941,10 @@ pub(crate) fn environment_overlay(app: &mut SolveApp, ui: &mut egui::Ui, viewpor
 
 pub(crate) fn interactive_command_info(app: &SolveApp, command: &solidcraft_engine::CommandSpec) -> solidcraft_engine::CommandInfo {
     let mut info = ribbon::command_info(app, command);
+    // pepe: Fusion-style ribbon icons (`workspace::fusion_icon`).
+    if let Some(icon) = crate::workspace::fusion_icon(command.id) {
+        info.icon = icon;
+    }
     if let Some(action) = solidcraft_engine::panels::ContextualPanelAction::from_command_id(command.id) {
         info.disabled_reason = app.panel_contextual_disabled_reason(action);
         info.enabled = info.disabled_reason.is_none();

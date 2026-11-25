@@ -1462,6 +1462,9 @@ preference_settings! {
     navigation_bar: crate::navigation_bar::NavigationBar = Default::default(), PAGE_LAYOUT;
     /// Show command names beneath ribbon icons, independently of workspace layout.
     ribbon_labels: bool = true, PAGE_LAYOUT;
+    /// pepe: the ribbon buttons' icon size in points; the ribbon grows with it. Fusion-like 32 by
+    /// default (the icons were 26 before).
+    ribbon_icon_size: f32 = 32.0, PAGE_LAYOUT, accept(20.0..=48.0) => slider("prefs.ribbon_icon_size", 20.0..=48.0, 2.0, |v| format!("{v:.0} px"), "prefs:ribbon_icon_size");
     /// Show engine-derived persistent selection in the ribbon; off retains neutral buttons.
     persistent_ribbon_pressed: bool = true, PAGE_LAYOUT;
     viewport_analysis_status: bool = true, PAGE_GRAPHICS;
@@ -4478,6 +4481,10 @@ pub fn migrate(mut p: Prefs) -> Prefs {
     }
     if !accepted::wheel_zoom_speed(&p) {
         p.wheel_zoom_speed = Prefs::default().wheel_zoom_speed;
+    }
+    // pepe: the ribbon's icon size.
+    if !accepted::ribbon_icon_size(&p) {
+        p.ribbon_icon_size = Prefs::default().ribbon_icon_size;
     }
     if !accepted::home_fit_size(&p) {
         p.home_fit_size = Prefs::default().home_fit_size;

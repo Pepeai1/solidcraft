@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <title>Measure</title>
-  <path d="M9 43.63L45 7.63L58 20.63L22 56.63Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M15 41.63L21 47.63" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M24 32.63L28 36.63" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M33 23.63L39 29.63" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M42 14.63L46 18.63" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M6 40.63L42 4.63" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0.1 5.1"/>
+  <path d="M5 37 L59 37 L59 49 L5 49 Z" fill="#f4a91c" stroke="#b97a07" stroke-width="1.3"/>
+  <path d="M9 37 L9 43.5 M12.84 37 L12.84 41.5 M16.68 37 L16.68 43.5 M20.52 37 L20.52 41.5 M24.36 37 L24.36 43.5 M28.2 37 L28.2 41.5 M32.04 37 L32.04 43.5 M35.88 37 L35.88 41.5 M39.72 37 L39.72 43.5 M43.56 37 L43.56 41.5 M47.4 37 L47.4 43.5 M51.24 37 L51.24 41.5 M55.08 37 L55.08 43.5" fill="none" stroke="#b97a07" stroke-width="1.2"/>
+  <path d="M6 15 L6 31 M58 15 L58 31" fill="none" stroke="#5b5b5b" stroke-width="2"/>
+  <path d="M14 23 L50 23" fill="none" stroke="#5b5b5b" stroke-width="2"/>
+  <path d="M7 23 L15 19 L15 27 Z" fill="#5b5b5b"/>
+  <path d="M57 23 L49 27 L49 19 Z" fill="#5b5b5b"/>
 </svg>

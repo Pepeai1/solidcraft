@@ -344,7 +344,11 @@ impl IconSet {
                     let mut stroke = self.parse_paint(t.get("stroke"), in_mask)?;
                     let visible_stroke = match stroke {
                         Paint::Line => true,
-                        Paint::Role(role) => !matches!(self.data.role_names.get(role).copied(), Some("gap" | "active-1" | "active-2" | "active-3")),
+                        // pepe: Fusion-roolien (fx-*) katkoviivat pitävät värinsä (Select-kuvakkeen vihreä).
+                        Paint::Role(role) => {
+                            !matches!(self.data.role_names.get(role).copied(), Some("gap" | "active-1" | "active-2" | "active-3"))
+                                && !self.data.role_names.get(role).is_some_and(|name| name.starts_with("fx-"))
+                        }
                         _ => false,
                     };
                     // Non-blue dotted/dashed references share the guide colour.
@@ -880,6 +884,46 @@ fn shape_paint(paint: Paint, look: PaintLook, alpha: f32) -> Option<sk::Paint<'s
     }
 }
 
+// pepe: Fusion 360 -tyyliset kuvakkeet. Pinnat saavat valon yläviistosta (liukuväri
+// vaaleasta vasemmasta yläkulmasta tummempaan oikeaan alakulmaan pinnan omasta
+// väristä) ja tummat ääriviivat (`ink`) ovat ohuemmat ja hieman läpikuultavat.
+// Viivapiirrokset (`line`), apuviivat (`guide`), poistot (`gap`) ja maskit ennallaan, samoin
+// Fusion-kuvakkeiden tasaiset viivaroolit (`fx-ink`, `*-edge`).
+const FUSION_LIGHT: f32 = 0.32;
+const FUSION_SHADE: f32 = 0.14;
+const FUSION_INK_WIDTH: f32 = 0.6;
+const FUSION_INK_ALPHA: f32 = 0.85;
+
+fn fusion_mix(c: [u8; 3], to: f32, t: f32) -> [u8; 3] {
+    c.map(|v| (f32::from(v) + (to - f32::from(v)) * t).round().clamp(0.0, 255.0) as u8)
+}
+
+fn fusion_role(look: PaintLook, paint: Paint) -> Option<&'static str> {
+    match paint {
+        Paint::Role(role) => look.set.data.role_names.get(role).copied(),
+        _ => None,
+    }
+}
+
+fn fusion_face(paint: &mut sk::Paint<'static>, c: [u8; 3], alpha: f32, bounds: sk::Rect) {
+    let a = (alpha.clamp(0.0, 1.0) * 255.0).round() as u8;
+    let light = fusion_mix(c, 255.0, FUSION_LIGHT);
+    let dark = fusion_mix(c, 0.0, FUSION_SHADE);
+    if let Some(shader) = sk::LinearGradient::new(
+        sk::Point::from_xy(bounds.left(), bounds.top()),
+        sk::Point::from_xy(bounds.right(), bounds.bottom()),
+        vec![
+            sk::GradientStop::new(0.0, sk::Color::from_rgba8(light[0], light[1], light[2], a)),
+            sk::GradientStop::new(0.55, sk::Color::from_rgba8(c[0], c[1], c[2], a)),
+            sk::GradientStop::new(1.0, sk::Color::from_rgba8(dark[0], dark[1], dark[2], a)),
+        ],
+        sk::SpreadMode::Pad,
+        sk::Transform::identity(),
+    ) {
+        paint.shader = shader;
+    }
+}
+
 fn draw_node(pm: &mut sk::Pixmap, n: &Node, look: PaintLook, tf: sk::Transform, doc: &Doc, clip: Option<&sk::Mask>, opacity: f32) {
     let own;
     let mask = if let Some(m) = n.mask {
@@ -901,12 +945,19 @@ fn draw_node(pm: &mut sk::Pixmap, n: &Node, look: PaintLook, tf: sk::Transform, 
         clip
     };
     let alpha = n.opacity * opacity;
-    if let Some(paint) = shape_paint(n.fill, look, alpha) {
+    if let Some(mut paint) = shape_paint(n.fill, look, alpha) {
+        if !matches!(fusion_role(look, n.fill), None | Some("ink" | "line" | "guide" | "gap" | "fx-ink"))
+            && !fusion_role(look, n.fill).is_some_and(|name| name.ends_with("-edge"))
+            && let Some(colour) = look.resolve(n.fill)
+        {
+            fusion_face(&mut paint, colour, alpha, n.path.bounds());
+        }
         pm.fill_path(&n.path, &paint, n.rule, tf, mask);
     }
-    if let Some(paint) = shape_paint(n.stroke, look, alpha) {
+    let ink = fusion_role(look, n.stroke) == Some("ink");
+    if let Some(paint) = shape_paint(n.stroke, look, if ink { alpha * FUSION_INK_ALPHA } else { alpha }) {
         let stroke = sk::Stroke {
-            width: n.width,
+            width: if ink { n.width * FUSION_INK_WIDTH } else { n.width },
             line_cap: sk::LineCap::Round,
             line_join: sk::LineJoin::Round,
             dash: if n.dash.is_empty() { None } else { sk::StrokeDash::new(n.dash.clone(), 0.0) },

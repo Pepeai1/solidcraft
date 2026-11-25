@@ -39,6 +39,13 @@ pub fn panel_host_surface<R>(
     let container = panel_host_container(ui.ctx(), floating);
     let mut frame = panel_host_frame(ui.ctx(), floating);
     frame.fill = fill;
+    // pepe: a fully transparent fill (the Browser) draws no card at all: no stroke, shadow,
+    // blur or bevel, so only its contents show over the view.
+    let see_through = fill.a() == 0;
+    if see_through {
+        frame.stroke = egui::Stroke::NONE;
+        frame.shadow = egui::Shadow::NONE;
+    }
     let clip = ui.clip_rect().intersect(bounds);
     // egui clips to rectangles. This inscribed rectangle keeps arbitrary content
     // fills inside the rounded frame without changing any header hit target.
@@ -49,7 +56,9 @@ pub fn panel_host_surface<R>(
     let paint = |ui: &mut egui::Ui| {
         let mut child = ui.new_child(egui::UiBuilder::new().id_salt(id).max_rect(bounds));
         child.set_clip_rect(clip);
-        container.paint_background(child.painter(), frame, bounds - frame.total_margin());
+        if !see_through {
+            container.paint_background(child.painter(), frame, bounds - frame.total_margin());
+        }
         if let Some(tokens) = palette {
             let visuals = child.visuals_mut();
             visuals.override_text_color = Some(tokens.text);
@@ -60,7 +69,9 @@ pub fn panel_host_surface<R>(
             }
         }
         let result = body(&mut child, content_clip);
-        Container::paint_inset_clipped(child.painter(), bounds, frame, clip);
+        if !see_through {
+            Container::paint_inset_clipped(child.painter(), bounds, frame, clip);
+        }
         result
     };
     if floating {
